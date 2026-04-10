@@ -1,5 +1,5 @@
 %% Load data
-data = load('results_lo.txt');   % your file
+data = load('results_hi.txt');   % your file
 
 t = data(:,1);
 x = data(:,2) / 1000;   % mm -> m
@@ -10,6 +10,7 @@ n = length(t);
 vx = zeros(n,1);
 vy = zeros(n,1);
 ay = zeros(n,1);
+ax = zeros(n,1);
 
 %% --- Velocity (central difference) ---
 for i = 2:n-1
@@ -21,10 +22,15 @@ end
 vx(1) = (x(2) - x(1)) / (t(2) - t(1));
 vy(1) = (y(2) - y(1)) / (t(2) - t(1));
 
-%% --- Acceleration (central difference on vy) ---
+%% --- Acceleration (central difference on vy/vx) ---
 for i = 2:n-1
     dt = t(i+1) - t(i-1);
     ay(i) = (vy(i+1) - vy(i-1)) / dt;
+end
+
+for i = 2:n-1
+    dt = t(i+1) - t(i-1); 
+    ax(i) = (vx(i+1) - vx(i-1)) / dt; 
 end
 
 %% --- Method's of caclulating acceleration ---
@@ -33,26 +39,28 @@ ay_g = ay / g;
 a_avg = mean(ay);
 a_avg_g = mean(ay_g);
 
-fprintf('Average acceleration: %.3f m/s^2\n', a_avg);
-fprintf('Average acceleration: %.3f g\n', a_avg_g);
+fprintf('Average y acceleration: %.3f m/s^2\n', a_avg);
+fprintf('Average y acceleration: %.3f g\n', a_avg_g);
 
-p = polyfit(x, y, 2);   % quadratic fit
+ax_avg = mean(ax); 
 
-vx_avg = mean(vx);   % or however you computed vx
+fprintf('Average x acceleration: %.3f m/s^2\n', ax_avg); 
+
+p = polyfit(x, y, 2);
+
+vx_avg = mean(vx);
 g_est = 2 * p(1) * vx_avg^2;
 
-y_fit = polyval(p, x);    % fitted values at original data points
-
+y_fit = polyval(p, x);  
 residuals = y - y_fit; 
 
+% error 
 delta_y = std(residuals);
 
+fprintf('Estimated g: %.4f m/s^2\n', g_est);
+fprintf('Estimated g: %.4f g\n', g_est / -9.81);
 
-
-fprintf('Estimated g: %.3f m/s^2\n', g_est);
-fprintf('Estimated g: %.3f g\n', g_est / -9.81);
-
-fprintf('Trendln: y = %.3f + %.3fx + %.3fx^2\n', p(3), p(2), p(1))
+fprintf('Trendln: y = %.4f + %.4fx + %.4fx^2\n', p(3), p(2), p(1))
 fprintf('Position Uncertainty (delta_y): %.4f m\n', delta_y);
 
 %% --- Initial velocity + launch angle --- 
@@ -108,6 +116,13 @@ yline(-9.81, 'r--')
 xlabel('Time (s)')
 ylabel('a_y (m/s^2)')
 title('a_y vs Time with expected g')
+grid on
+
+subplot(3,1,2)
+scatter(t,ax)
+xlabel('Time (s)')
+ylabel('a_x (m/s^2)')
+title('a_x vs Time')
 grid on
 
 %% --- Trajectory Comparison ---
